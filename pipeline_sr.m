@@ -4,30 +4,30 @@
 
 %  1.1 Define the main directory of the preprocessed dataset. The main dir
 %  should contain the supercat output files
-main_dir = 'D:\Sid\data\testing2';
+main_dir = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251107';
 addpath(genpath(main_dir));
 
 % 1.2 Define the supercat output folder
-supercat_path = 'D:\Sid\data\testing2\preprocessing_output\supercat_pre_homecage_g0';
+supercat_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251107\preprocessing_output\supercat_pre_sleep_g0';
 baseName = bz_BasenameFromBasepath(main_dir);
 cd(main_dir)
 
 %% 2. Building XML from meta file
-numOfProbes = 2;
+numOfProbes = 4;
 fileInfo = dataPathsNP2_SpikeGLX_multi_NP2(supercat_path, numOfProbes);
-save([baseName '.fileInfo.mat'], 'fileInfo', '-v7.3')
+save(fullfile(main_dir, [baseName '.fileInfo.mat']), 'fileInfo', '-v7.3')
 
 % Paths to template XML and directory with imro files
 genXML_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Use_dependent_sleep\UDS_R01'; %'Z:\buzsakilab\Homes\voerom01\Use_dependent_sleep';
 %imroDir_path = 'D:\Sid\data\Use_dependent_sleep\UDS_R01\Imro_files'; %'Z:\buzsakilab\Homes\voerom01\Use_dependent_sleep\Imro_files';
-imroDir_path = 'D:\Sid\data\testing\imro';
+imroDir_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\IMRO_files';
 
 for probe_num = 1:numOfProbes
     for file_num = 1:fileInfo.nFolders{probe_num}
         ses_path = fileInfo.folder{1, probe_num}{file_num}; % session path
         imro2xml_FINAL('basepath', ses_path, 'genXML_path', genXML_path, ...
             'imroDir_path', imroDir_path); % creates xml from imro file and synchronizes spikeGroups +removes refChan (default 127) and sync channel (default 384)
-        session = sessionTemplate(ses_path,'showGUI',false,'saveFile',true); % sessionTemplate will use xml or sessionInfo if present
+        session = sessionTemplate_NPX(ses_path,'showGUI',false,'saveFile',true); % sessionTemplate will use xml or sessionInfo if present
     end
     
     % Copy session file for each probe to basepath for merged files later
@@ -40,7 +40,7 @@ for probe_num = 1:numOfProbes
     subDirName = [fileName_pt1 '_imec' num2str(probe_num - 1)]; 
 
     movefile(fullfile(ses_path, ses_file.name), [main_dir, filesep, baseName '_imec' num2str(probe_num-1), '.session.mat']); % needed for state scoring
-    movefile(fullfile(ses_path, [ses_file.name(1:end-12), '.xml']), [main_dir, filesep, baseName '_imec' num2str(probe_num-1),'.xml']); % needed for channelMap
+    movefile(fullfile(ses_path, [fileName_pt1, '_t0', '.imec' num2str(probe_num-1), '.ap.xml']), [main_dir, filesep, baseName '_imec' num2str(probe_num-1),'.xml']); % needed for channelMap
     
     % Change session general name
     session.general.name = [baseName '_imec' num2str(probe_num-1)];

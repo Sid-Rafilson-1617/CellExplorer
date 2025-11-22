@@ -229,7 +229,7 @@ function imroBaseName = copyImroFromMeta(varargin)
     targetDir = p.Results.targetDir;
     
     %% Locate .meta file in current directory 
-    metaFiles = checkFile('basepath', basepath, 'fileType', '.meta');
+    metaFiles = checkFile('basepath', basepath, 'fileType', '.ap.meta');
     if numel(metaFiles) == 0
         error('No .meta file found in the current directory: %s', basepath);
     elseif numel(metaFiles) > 1

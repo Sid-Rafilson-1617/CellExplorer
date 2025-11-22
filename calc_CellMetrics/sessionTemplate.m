@@ -28,6 +28,7 @@ addParameter(p,'basename',[],@isstr);
 addParameter(p,'importSkippedChannels',true,@islogical); % Import skipped channels from the xml as bad channels
 addParameter(p,'importSyncedChannels',true,@islogical);  % Import channel not synchronized between electrode groups and spike groups as bad channels
 addParameter(p,'showGUI',false,@islogical);              % Show the session gui
+addParameter(p,'saveFile',false,@islogical); 
 
 % Parsing inputs
 parse(p,input1,varargin{:})
@@ -35,6 +36,7 @@ basename = p.Results.basename;
 importSkippedChannels = p.Results.importSkippedChannels;
 importSyncedChannels = p.Results.importSyncedChannels;
 showGUI = p.Results.showGUI;
+saveFile = p.Results.saveFile;
 
 % Initializing session struct and defining basepath, if not specified as an input
 if ischar(input1)
@@ -427,4 +429,14 @@ end
 % Shows GUI if requested by user
 if showGUI
     session = gui_session(session);
+end
+
+if saveFile
+    try 
+        temp = checkFile('fileType', '.dat', 'searchSubdirs', false);
+    catch
+        temp = checkFile('fileType', '.bin', 'searchSubdirs', false);
+    end
+        [~,filename] = fileparts(temp.name);
+        save([filename '.session.mat'], 'session', '-v7.3')
 end
