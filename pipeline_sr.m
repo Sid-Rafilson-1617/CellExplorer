@@ -4,23 +4,26 @@
 
 %  1.1 Define the main directory of the preprocessed dataset. The main dir
 %  should contain the supercat output files
-main_dir = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251107';
-addpath(genpath(main_dir));
+basePath = 'R:\Bilat_HPC\Bilat_R02\Bilat_R02_20251107';
+addpath(genpath(basePath));
 
 % 1.2 Define the supercat output folder
-supercat_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251107\preprocessing_output\supercat_pre_sleep_g0';
-baseName = bz_BasenameFromBasepath(main_dir);
-cd(main_dir)
+supercat_path = 'R:\Bilat_HPC\Bilat_R02\Bilat_R02_20251107\preprocessing_output\supercat_pre_sleep_g0';
+baseName = bz_BasenameFromBasepath(basePath);
+cd(basePath)
+
+%1.3 Define the number of probes
+numOfProbes = 4;
 
 %% 2. Building XML from meta file
-numOfProbes = 4;
 fileInfo = dataPathsNP2_SpikeGLX_multi_NP2(supercat_path, numOfProbes);
-save(fullfile(main_dir, [baseName '.fileInfo.mat']), 'fileInfo', '-v7.3')
+save(fullfile(basePath, [baseName '.fileInfo.mat']), 'fileInfo', '-v7.3')
 
 % Paths to template XML and directory with imro files
 genXML_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Use_dependent_sleep\UDS_R01'; %'Z:\buzsakilab\Homes\voerom01\Use_dependent_sleep';
 %imroDir_path = 'D:\Sid\data\Use_dependent_sleep\UDS_R01\Imro_files'; %'Z:\buzsakilab\Homes\voerom01\Use_dependent_sleep\Imro_files';
-imroDir_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\IMRO_files';
+%imroDir_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\IMRO_files';
+imroDir_path = 'D:\Sid\data\testing\imro'
 
 for probe_num = 1:numOfProbes
     for file_num = 1:fileInfo.nFolders{probe_num}
@@ -39,55 +42,68 @@ for probe_num = 1:numOfProbes
     fileName = [fileName_pt1 '_tcat.imec' num2str(probe_num - 1)]; 
     subDirName = [fileName_pt1 '_imec' num2str(probe_num - 1)]; 
 
-    movefile(fullfile(ses_path, ses_file.name), [main_dir, filesep, baseName '_imec' num2str(probe_num-1), '.session.mat']); % needed for state scoring
-    movefile(fullfile(ses_path, [fileName_pt1, '_t0', '.imec' num2str(probe_num-1), '.ap.xml']), [main_dir, filesep, baseName '_imec' num2str(probe_num-1),'.xml']); % needed for channelMap
+    movefile(fullfile(ses_path, ses_file.name), [basePath, filesep, baseName '_imec' num2str(probe_num-1), '.session.mat']); % needed for state scoring
+    movefile(fullfile(ses_path, [fileName_pt1, '_t0', '.imec' num2str(probe_num-1), '.ap.xml']), [basePath, filesep, baseName '_imec' num2str(probe_num-1),'.xml']); % needed for channelMap
     
     % Change session general name
     session.general.name = [baseName '_imec' num2str(probe_num-1)];
-    session.general.basePath = main_dir;
-    save([main_dir, filesep, baseName '_imec' num2str(probe_num-1) '.session.mat'], 'session');
+    session.general.basePath = basePath;
+    save([basePath, filesep, baseName '_imec' num2str(probe_num-1) '.session.mat'], 'session');
     
     % Create channel maps for Kilosort 
     SGLXMetaToCoords; % make sure outType = 1
     movefile(fullfile(ses_path, [ses_file.name(1:end-12), '_kilosortChanMap.mat']), ...
-        [main_dir, filesep, baseName '_imec' num2str(probe_num-1), '.kilosortChanMap.mat']);
+        [basePath, filesep, baseName '_imec' num2str(probe_num-1), '.kilosortChanMap.mat']);
 
     % Move the .ap.bin file to the main directory and rename to baseName.dat
     oldFileName = [supercat_path, filesep, subDirName, filesep, fileName, '.ap.bin'];
-    newFilePath = [main_dir, filesep, baseName '_imec' num2str(probe_num-1) '.dat'];        
+    newFilePath = [basePath, filesep, baseName '_imec' num2str(probe_num-1) '.dat'];        
     movefile(oldFileName, newFilePath);
 
     oldFileName = [supercat_path, filesep, subDirName, filesep, fileName, '.lf.bin'];
-    newFilePath = [main_dir, filesep, baseName '_imec' num2str(probe_num-1) '.lfp'];        
+    newFilePath = [basePath, filesep, baseName '_imec' num2str(probe_num-1) '.lfp'];        
     movefile(oldFileName, newFilePath);
     
     % Move kilsort directories
     oldFileName = [supercat_path, filesep, subDirName, filesep, ['Kilosort_imec' num2str(probe_num - 1) '_ks4']];
-    newFilePath = [main_dir, filesep, ['Kilosort_imec' num2str(probe_num - 1) '_ks4']];        
+    newFilePath = [basePath, filesep, ['Kilosort_imec' num2str(probe_num - 1) '_ks4']];        
     movefile(oldFileName, newFilePath);
  
 end
 
 %% 3. Generate session metadata struct using the template function and display the meta data in a gui
-cd(main_dir)
+cd(basePath)
 for imec_use = 0:numOfProbes - 1
     % Load session file with probe-specific basename
     session = sessionTemplate(pwd, 'basename', [baseName '_imec' num2str(imec_use)], 'showGUI',false);
-    % session = gui_session(session); % inspect the session struct by calling GUI directly
-
-    % And validate the required and optional fields
-    %validateSessionStruct(session);
 
     % Run the cell metrics pipeline 'ProcessCellMetrics' using the session struct as input
-    cell_metrics = ProcessCellMetrics('session', session);
+    cell_metrics = ProcessCellMetrics('session', session, 'showGUI', false);
 end
 
-%% 4.1.2 Visualize the cell metrics in CellExplorer
-cell_metrics = CellExplorer('metrics',cell_metrics); 
+%% 5. Sleep state scoring
+lfpFiles = checkFile('basepath',basePath,'fileType','.lfp');
+% Select lfp_num corresponding to probe with cortical channel
+for lfp_num = 1:length(lfpFiles)
+    filename = lfpFiles(lfp_num).name; % remove extension
+    SleepState = SleepScoreMaster_km(basePath,'filename',filename); % requires session or sessionInfo file
+end
 
-%% 4.2 Open several session from basepaths
-basenames = {'basename1','basename2'};
-basepaths = {'/your/data/path/basename1/','/your/data/path/basename2/'};
-cell_metrics = loadCellMetricsBatch('basepaths',basepaths,'basenames',basenames);
-cell_metrics = CellExplorer('metrics',cell_metrics);
+% Check sleep state scoring results with GUI
+TheStateEditor([pwd,filesep,filename])
+
+%% 6. Ripple detection
+% manually inspect the lfp files to find good channels for ripple detection
+channels = [0, 0, 0, 0];
+
+for lfp_num = 1:length(lfpFiles)
+    channel  = channels(lfp_num) + 1;
+
+    % Extract filename without extension
+    [~, filename, ~] = fileparts(lfpFiles(lfp_num).name);
+
+    % Pass the cleaned name to bz_FindRipples_MV
+    ripples = bz_FindRipples_MV(basePath, channel, 'filename', filename, 'saveMat', true, 'plotType', 1);
+end
+
 
