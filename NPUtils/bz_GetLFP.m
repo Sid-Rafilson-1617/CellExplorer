@@ -92,6 +92,8 @@ lfpFile = p.Results.lfpFile;
 
 
 
+
+
 % doing this so you can use either 'intervals' or 'restrict' as parameters to do the same thing
 intervals = p.Results.intervals;
 restrict = p.Results.restrict;
@@ -151,6 +153,8 @@ if isempty(lfpFile)
 
 else % ~isempty(lfpFile)
        d = dir([lfpFile '.lfp']);
+       disp('here')
+       disp(d)
        if length(d) > 1 % we assume one .lfp file or this should break
            error('there is more than one .lfp file in this directory?');
        elseif length(d) == 0

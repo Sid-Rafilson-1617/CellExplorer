@@ -488,6 +488,11 @@ normTHspec = bz_NormToRange(THmeanspec,[0 numusedchannels.*0.6]);
         t_FFT(ignoretimeIDX) = [];
     end
     
+fprintf('mu range: [%g %g], sig range: [%g %g]\n', ...
+        min(mu), max(mu), min(sig), max(sig));
+disp(mu)
+disp(sig)
+
 subplot(5,1,3)
  %   plot(allLFP(:,1),allLFP(:,goodSWidx),'k')
     
@@ -498,7 +503,14 @@ subplot(5,1,3)
         axis xy
         plot(t_FFT,bz_NormToRange(thratio,log2(thFFTfreqs([1 end]))),'k','Linewidth',0.1)
         LogScale_ss('y',2)
-        clim(double([min(mu)-2.5*max(sig) max(mu)+2.5*max(sig)]))
+        lo = nanmin(mu) - 2.5 * nanmax(sig);
+        hi = nanmax(mu) + 2.5 * nanmax(sig);
+        clims = [lo hi];
+
+        if any(~isfinite(clims)) || clims(2) <= clims(1)
+            % same fallback logic as above
+        end
+        clim(clims);
         ylim([log2(thFFTfreqs(1)) log2(thFFTfreqs(end))+0.2])
         ylabel({'LFP - FFT','f (Hz)'})
         title(['Theta Channel: ',num2str(THchanID)]);

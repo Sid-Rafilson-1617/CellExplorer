@@ -35,7 +35,37 @@ clusterfig = figure('visible','off');
         set(gca,'YTick',(log2([1 2 4 8 16 32 64 128])))
         set(gca,'YTickLabel',{'1','2','4','8','16','32','64','128'})
         clim([3.5 6.5])
-        clim(double([min(mu)-2*max(sig) max(mu)+2*max(sig)]))
+        
+        
+        % Original intent: center and scale colormap based on mu ± 2*sig
+        lo = nanmin(mu) - 2 * nanmax(sig);
+        hi = nanmax(mu) + 2 * nanmax(sig);
+        clims = [lo hi];
+
+        % First attempt: if NaN/Inf or reversed / zero-width, try just mu range
+        if any(~isfinite(clims)) || clims(2) <= clims(1)
+            lo = nanmin(mu);
+            hi = nanmax(mu);
+            clims = [lo hi];
+        end
+
+        % Second attempt: if still bad, construct a fallback
+        if any(~isfinite(clims)) || clims(2) <= clims(1)
+            % If mu itself is degenerate or all NaN, use a symmetric default
+            if ~isfinite(lo) || ~isfinite(hi) || hi <= lo
+                lo = -1;
+                hi = 1;
+            else
+                % Add a small padding so hi > lo
+                pad = 0.1 * max(1, abs(hi - lo));
+                lo = lo - pad;
+                hi = hi + pad;
+            end
+            clims = [lo hi];
+        end
+
+        clim(double(clims));
+        %clim(double([nanmin(mu)-2*nanmax(sig) nanmax(mu)+2*nanmax(sig)]))
         xlim(viewwin)
         colorbar('east')
         ylim([log2(swFFTfreqs(1)) log2(swFFTfreqs(end))+0.2])
@@ -49,7 +79,37 @@ clusterfig = figure('visible','off');
         set(gca,'YTick',(log2([1 2 4 8 16 32 64 128])))
         set(gca,'YTickLabel',{'1','2','4','8','16','32','64','128'})
         %clim([3.5 6.5])
-        clim(double([min(mu_th)-2*max(sig_th) max(mu_th)+2*max(sig_th)]))
+        
+        
+        % Original intent: center and scale colormap based on mu ± 2*sig
+        lo = nanmin(mu_th) - 2 * nanmax(sig_th);
+        hi = nanmax(mu_th) + 2 * nanmax(sig_th);
+        clims = [lo hi];
+
+        % First attempt: if NaN/Inf or reversed / zero-width, try just mu range
+        if any(~isfinite(clims)) || clims(2) <= clims(1)
+            lo = nanmin(mu_th);
+            hi = nanmax(mu_th);
+            clims = [lo hi];
+        end
+
+        % Second attempt: if still bad, construct a fallback
+        if any(~isfinite(clims)) || clims(2) <= clims(1)
+            % If mu itself is degenerate or all NaN, use a symmetric default
+            if ~isfinite(lo) || ~isfinite(hi) || hi <= lo
+                lo = -1;
+                hi = 1;
+            else
+                % Add a small padding so hi > lo
+                pad = 0.1 * max(1, abs(hi - lo));
+                lo = lo - pad;
+                hi = hi + pad;
+            end
+            clims = [lo hi];
+        end
+
+        clim(double(clims));
+        %clim(double([nanmin(mu_th)-2*nanmax(sig_th) nanmax(mu_th)+2*nanmax(sig_th)]))
         xlim(viewwin)
         %colorbar('east')
         ylim([log2(thFFTfreqs(1)) log2(thFFTfreqs(end))+0.2])

@@ -16,48 +16,48 @@ function	[dip,xl,xu, ifault, gcm, lcm, mn, mj] = hartigansdiptest_ss(xpdf)
 % the modal interval (XL,XU), ann error flag IFAULT (>0 flags an error)
 % as well as the minorant and majorant fits GCM, LCM, and the corresponding support indices MN, and MJ
 
-% sort X in increasing order in column vector
-x=sort(xpdf(:));
-N=length(x);
-mn=zeros(size(x));
-mj=zeros(size(x));
-lcm=zeros(size(x));
-gcm=zeros(size(x));
-ifault=0;
 
-% Check that N is positive
-if (N<=0) 
-   ifault=1;
-   error(1,'\nHartigansDipTest.    InputError :  ifault=%d\n',ifault);
-end;
+% sort X in increasing order in column vector and remove non-finite values
+x = xpdf(:);
+x = x(isfinite(x));  % remove NaN and Inf
+x = sort(x);
+N = numel(x);
 
-% Check if N is one
-if (N==1)
-   xl=x(1);
-   xu=x(N);
-   dip=0.0;
-   ifault=2;
-   error(1,'\nHartigansDipTest.    InputError :  ifault=%d\n',ifault);
-end;
+% preallocate outputs based on N (handle N=0 separately below)
+mn  = zeros(N,1);
+mj  = zeros(N,1);
+lcm = zeros(N,1);
+gcm = zeros(N,1);
+ifault = 0;
 
-if (N>1)
-   % Check that X is sorted
-   if (x ~= sort(x))
-      ifault=3;
-      error(1,'\nHartigansDipTest.    InputError :  ifault=%d\n',ifault);
+% --- Handle degenerate / bad inputs gracefully ---
 
-   end;
-   % Check for all values of X identical OR for case 1<N<4
-   if ~((x(N)>x(1)) & (4<=N))
-      xl=x(1);
-      xu=x(N);
-      dip=0.0;
-      ifault=4;
-      error(1,'\nHartigansDipTest.    InputError :  ifault=%d\n',ifault);
+% no finite data at all
+if N == 0
+    dip    = 0.0;
+    xl     = NaN;
+    xu     = NaN;
+    ifault = 1;   % no data
+    return;
+end
 
-   end;
-end;
+% single point
+if N == 1
+    dip    = 0.0;
+    xl     = x(1);
+    xu     = x(1);
+    ifault = 2;   % N == 1
+    return;
+end
 
+% all values identical OR N < 4  → treat as perfectly unimodal
+if ~(x(end) > x(1) && N >= 4)
+    xl     = x(1);
+    xu     = x(end);
+    dip    = 0.0;
+    ifault = 4;   % degenerate / too short
+    return;
+end
 % Check if X is perfectly unimodal
 % Hartigan's original DIPTST algorithm did not check for this condition
 % and DIPTST runs into infinite cycle for a unimodal input

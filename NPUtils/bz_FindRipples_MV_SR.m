@@ -23,6 +23,7 @@ function [ripples] = bz_FindRipples_MV(varargin)
 %
 %    basepath       path to a single session to run findRipples on
 %    channel      	Ripple channel to use for detection (0-indexed, a la neuroscope)
+%    probe          probe number used for naming the output file
 %
 %    =========================================================================
 %     Properties    Values
@@ -89,6 +90,8 @@ addParameter(p,'saveMat',false,@islogical);
 addParameter(p,'minDuration',20,@isnumeric)
 addParameter(p,'plotType',1,@isnumeric) % changed from 2 to 1
 addParameter(p,'filename','',@isstr) % no extension
+addParameter(p, 'probe', '', @isstr); % probe and shank string used for saving results
+addParameter(p, 'shank', '', @isstr);
 
 if isstr(varargin{1})  % if first arg is basepath
     addRequired(p,'basepath',@isstr)
@@ -98,9 +101,11 @@ if isstr(varargin{1})  % if first arg is basepath
     basepath = p.Results.basepath;
     passband = p.Results.passband;
     EMGThresh = p.Results.EMGThresh;
-    lfp = bz_GetLFP(p.Results.channel,'basepath', basepath, 'lfpFile', p.Results.filename);%currently cannot take path inputs
+    lfp = bz_GetLFP(p.Results.channel,'basepath', basepath, 'lfpFile', p.Results.filename);
     signal = bz_Filter(double(lfp.data),'filter','butter','passband',passband,'order', 3);
     timestamps = lfp.timestamps;
+    shank = p.Results.shank;
+    probe = p.Results.probe;
 elseif isnumeric(varargin{1}) % if first arg is filtered LFP
     addRequired(p,'lfp',@isnumeric)
     addRequired(p,'timestamps',@isnumeric)
@@ -111,6 +116,7 @@ elseif isnumeric(varargin{1}) % if first arg is filtered LFP
     signal = bz_Filter(double(p.Results.lfp),'filter','butter','passband',passband,'order', 3);
     timestamps = p.Results.timestamps;
     basepath = pwd;
+  
     if isempty(filename)
         basename = bz_BasenameFromBasepath(basepath);
     else
@@ -405,7 +411,7 @@ ripples.detectorinfo = detectorinfo;
 
 %Save
 if p.Results.saveMat
-    save(fullfile(basepath, [basename '.ripples.events.mat']),'ripples')
+    save(fullfile(basepath, [basename '_imec' probe '_shank' shank '.ripples.events.mat']),'ripples')
 end
 
 
