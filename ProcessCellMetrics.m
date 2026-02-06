@@ -110,6 +110,8 @@ addParameter(p,'saveAs','cell_metrics',@isstr);
 addParameter(p,'saveBackup',true,@islogical);
 addParameter(p,'fileFormat','mat',@isstr);
 addParameter(p,'transferFilesFromClusterpath',true,@islogical);
+addParameter(p,'spikeFormat','phy',@(x) ischar(x) || (isstring(x) && isscalar(x)));
+
 
 % Plot related parameters
 addParameter(p,'showFigures',false,@islogical);
@@ -126,6 +128,9 @@ sessionStruct = p.Results.session;
 basepath = p.Results.basepath;
 parameters = p.Results;
 timerCalcMetrics = tic;
+spikeFormat = p.Results.spikeFormat;
+spikeFormat = char(spikeFormat); % if you want to force char
+
 
 % Verifying required toolboxes are installed
 installedToolboxes = ver;
@@ -275,10 +280,10 @@ if ~isempty(parameters.spikes)
     parameters.spikes = [];
 else
     dispLog('Getting spikes',basename)
-    spikes{1} = loadSpikes('session',session,'labelsToRead',preferences.loadSpikes.labelsToRead,'getWaveformsFromDat',parameters.getWaveformsFromDat,'showWaveforms',parameters.showWaveforms);
+    spikes{1} = loadSpikes('session',session,'labelsToRead',preferences.loadSpikes.labelsToRead,'getWaveformsFromDat',parameters.getWaveformsFromDat,'showWaveforms',parameters.showWaveforms, 'format', spikeFormat);
 end
 if parameters.getWaveformsFromDat && (~isfield(spikes{1},'processinginfo') || ~isfield(spikes{1}.processinginfo.params,'WaveformsSource') || ~strcmp(spikes{1}.processinginfo.params.WaveformsSource,'dat file') || spikes{1}.processinginfo.version<3.5 || parameters.forceReloadSpikes == true)
-    spikes{1} = loadSpikes('forceReload',true,'spikes',spikes{1},'session',session,'labelsToRead',preferences.loadSpikes.labelsToRead,'showWaveforms',parameters.showWaveforms);
+    spikes{1} = loadSpikes('forceReload',true,'spikes',spikes{1},'session',session,'labelsToRead',preferences.loadSpikes.labelsToRead,'showWaveforms',parameters.showWaveforms, 'format', spikeFormat);
 end
 
 spikes{1}.numcells = length(spikes{1}.times);

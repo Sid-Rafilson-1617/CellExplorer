@@ -76,7 +76,7 @@ session.general.version = 5; % Metadata version
 
 defaults.general.name = basename; % Session name / basename
 defaults.general.basePath =  basepath; % Full path
-defaults.general.sessionType = 'Unknown'; % Type of recording: Chronic, Acute, Unknown
+defaults.general.sessionType = 'Chronic'; % Type of recording: Chronic, Acute, Unknown
 general_fields = fieldnames(defaults.general);
 
 for i = 1:numel(general_fields)
@@ -92,8 +92,8 @@ end
 
 defaults.animal.name = pathPieces{end-1}; % Animal name is inferred from the data path
 defaults.animal.sex = 'Unknown'; % Male, Female, Unknown
-defaults.animal.species = 'Unknown'; % Mouse, Rat
-defaults.animal.strain = 'Unknown';
+defaults.animal.species = 'Rat'; % Mouse, Rat
+defaults.animal.strain = 'Long Evans';
 defaults.animal.geneticLine = '';
 animal_fields = fieldnames(defaults.animal);
 
@@ -124,7 +124,16 @@ for i = 1:numel(extracellular_fields)
         session.extracellular.(extracellular_fields{i}) = defaults.extracellular.(extracellular_fields{i}); 
     end
 end
-session.extracellular.nElectrodeGroups = numel(defaults.extracellular.electrodeGroups);
+
+if ~isfield(session, 'extracellular') || ...          
+   ~isfield(session.extracellular, 'nElectrodeGroups') || ...
+   isempty(session.extracellular.nElectrodeGroups)
+
+    session.extracellular.nElectrodeGroups = ...
+        numel(defaults.extracellular.electrodeGroups);
+end
+
+
 
 if ~isfield(session,'extracellular') || (isfield(session,'extracellular') && (~isfield(session.extracellular,'spikeGroups')) || isempty(session.extracellular.spikeGroups))
     session.extracellular.spikeGroups = session.extracellular.electrodeGroups;

@@ -5694,6 +5694,7 @@ end
             for fn = 1:data.session.extracellular.nElectrodeGroups
                 channels = intersect(data.session.extracellular.electrodeGroups.channels{fn},UI.settings.chanCoordsToPlot,'stable');
                 if ~isempty(channels)
+                    disp(numel(channels))
                     UI.plotpoints.chanCoords(fn) = line(UI.chanCoordsAxes,data.session.extracellular.chanCoords.x(channels),data.session.extracellular.chanCoords.y(channels),'color',0.8*UI.colors(fn,:),'Marker','.','linestyle','none','HitTest','off','markersize',10);
                 end
             end

@@ -235,7 +235,7 @@ function imroBaseName = copyImroFromMeta(varargin)
     elseif numel(metaFiles) > 1
         error('Multiple .meta files found in the current directory. Please keep only one or specify which to use.');
     end
-    metaFile = metaFiles(1).name;
+    metaFile = fullfile(metaFiles(1).folder, metaFiles(1).name);
     
     %% Read the .meta file and find "imroFile=" line
     fid = fopen(metaFile,'r');

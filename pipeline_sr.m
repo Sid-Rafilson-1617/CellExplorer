@@ -4,17 +4,20 @@
 
 %  1.1 Define the main directory of the preprocessed dataset. The main dir
 %  should contain the supercat output files
-basePath = 'R:\Bilat_HPC\Bilat_R02\Bilat_R02_20251106';
-addpath(genpath(basePath));
+basePath = 'Z:\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251106';
+%addpath(genpath(basePath));
 
 % 1.2 Define the supercat output folder
-supercat_path = 'R:\Bilat_HPC\Bilat_R02\Bilat_R02_20251106\preprocessing_output\supercat_pre_sleep_g0';
+supercat_path = 'Z:\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251106\preprocessing_output\supercat_pre_sleep_g0';
 baseName = bz_BasenameFromBasepath(basePath);
 cd(basePath)
 
 %1.3 Define the number of probes
 numOfProbes = 4;
 numShanks = 4;
+
+% 1.4 Define the expected number of channels
+nCh_expected = 385;
 
 %% 2. Building XML from meta file
 fileInfo = dataPathsNP2_SpikeGLX_multi_NP2(supercat_path, numOfProbes);
@@ -24,7 +27,7 @@ save(fullfile(basePath, [baseName '.fileInfo.mat']), 'fileInfo', '-v7.3')
 genXML_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Use_dependent_sleep\UDS_R01'; %'Z:\buzsakilab\Homes\voerom01\Use_dependent_sleep';
 %imroDir_path = 'D:\Sid\data\Use_dependent_sleep\UDS_R01\Imro_files'; %'Z:\buzsakilab\Homes\voerom01\Use_dependent_sleep\Imro_files';
 %imroDir_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\IMRO_files';
-imroDir_path = 'D:\Sid\data\testing\imro';
+imroDir_path = 'Z:\Homes\ser9475\testing\imro';
 %%
 for probe_num = 1:numOfProbes
     for file_num = 1:fileInfo.nFolders{probe_num}
@@ -43,8 +46,8 @@ for probe_num = 1:numOfProbes
     fileName = [fileName_pt1 '_tcat.imec' num2str(probe_num - 1)]; 
     subDirName = [fileName_pt1 '_imec' num2str(probe_num - 1)]; 
 
-    movefile(fullfile(ses_path, ses_file.name), [basePath, filesep, baseName '_imec' num2str(probe_num-1), '.session.mat']); % needed for state scoring
-    movefile(fullfile(ses_path, [fileName_pt1, '_t0', '.imec' num2str(probe_num-1), '.ap.xml']), [basePath, filesep, baseName '_imec' num2str(probe_num-1),'.xml']); % needed for channelMap
+    movefile(fullfile(ses_path, ses_file.name), [basePath, filesep, baseName '.imec' num2str(probe_num-1), '.session.mat']); % needed for state scoring
+    movefile(fullfile(ses_path, [fileName_pt1, '_t0', '_imec' num2str(probe_num-1), '.ap.xml']), [basePath, filesep, baseName '_imec' num2str(probe_num-1),'.xml']); % needed for channelMap
     
     % Create channel maps for Kilosort 
     SGLXMetaToCoords; % make sure outType = 1
@@ -54,6 +57,19 @@ for probe_num = 1:numOfProbes
     load(coords_file, 'xcoords', 'ycoords', 'kcoords');
     session.general.name = [baseName '_imec' num2str(probe_num-1)];
     session.general.basePath = basePath;
+    
+
+    xcoords = xcoords(:);
+    ycoords = ycoords(:);
+
+    if numel(xcoords) == nCh_expected-1
+        xcoords(end+1) = xcoords(end);   % or NaN
+        ycoords(end+1) = ycoords(end);   % or NaN
+    elseif numel(xcoords) ~= nCh_expected
+        error('Unexpected coord length: %d (expected %d or %d)', numel(xcoords), nCh_expected-1, nCh_expected);
+    end
+
+    session.extracellular.nChannels = nCh_expected;
     session.extracellular.chanCoords.x = xcoords;
     session.extracellular.chanCoords.y = ycoords;
     session.extracellular.chanCoords.verticalSpacing = [];
@@ -73,12 +89,31 @@ for probe_num = 1:numOfProbes
     newFilePath = [basePath, filesep, baseName '_imec' num2str(probe_num-1) '.lfp'];        
     movefile(oldFileName, newFilePath);
     
+    % move the .ap.meta file to the main directory and rename
+    oldFileName = [supercat_path, filesep, subDirName, filesep, fileName, '.ap.meta'];
+    newFilePath = [basePath, filesep, baseName '_imec' num2str(probe_num-1) '.meta'];        
+    movefile(oldFileName, newFilePath);
+
+        
+    
     % Move kilsort directories
     oldFileName = [supercat_path, filesep, subDirName, filesep, ['Kilosort_imec' num2str(probe_num - 1) '_ks4']];
     newFilePath = [basePath, filesep, ['Kilosort_imec' num2str(probe_num - 1) '_ks4']];        
     movefile(oldFileName, newFilePath);
  
 end
+
+%% Phy autoclustering
+cd(basePath)
+for imec_use = 0:numOfProbes - 1
+    % get the kilosort path for the probe
+    kilosort_path = [basePath, filesep,['Kilosort_imec' num2str(imec_use) '_ks4']];
+    
+    % run the Phy Auto Cluster
+    PhyAutoClustering_km(kilosort_path)
+end
+
+
 
 %% 3. Generate session metadata struct using the template function and display the meta data in a gui
 cd(basePath)
@@ -87,7 +122,7 @@ for imec_use = 0:numOfProbes - 1
     session = sessionTemplate(basePath, 'basename', [baseName '_imec' num2str(imec_use)], 'showGUI',false);
 
     % Run the cell metrics pipeline 'ProcessCellMetrics' using the session struct as input
-    cell_metrics = ProcessCellMetrics('session', session, 'showGUI', false, 'manualAdjustMonoSyn', false);
+    cell_metrics = ProcessCellMetrics('session', session, 'showGUI', false, 'manualAdjustMonoSyn', false, 'spikeFormat', 'sglx');
 end
 
 %% 5. Sleep state scoring
@@ -104,12 +139,15 @@ end
 %% 6. Ripple detection
 % manually inspect the lfp files to find good channels for ripple detection
 
-% channels(row = probe/lfp file, col = shank)
-channels = [170, 128, 374, 317;   
-            190, 61, 208, 261;
-            27, 85, 216, 255;
-            106, 81, 199, 315];
-save('ripple_channel_config.mat','channels');
+% Ripple channel selection
+
+
+% channels(row = probe/lfp file, col = shank)!! Check indexing
+channels = [178, 129, 369, 318;   
+            1, 59, 211, 265;
+            19, 78, 221, 259;
+            107, 83, 200, 313];
+%save('ripple_channel_config.mat','channels');
 % ---- Build LFP file list explicitly ----
 lfpFiles = cell(numOfProbes,1);
 
@@ -135,12 +173,14 @@ for probe = 1:numOfProbes
         channel = channels(probe, shank);
 
         ripples = bz_FindRipples_MV_SR( ...
-            basePath, channel, ...
+            basePath,  channel, ...
             'filename', filename, ...
             'saveMat', true, ...
             'plotType', 1, ...
             'probe', num2str(probe-1), ...          
-            'shank', num2str(shank-1));        
+            'shank', num2str(shank-1), ...
+            'EMGThresh', 0.9, ...
+            'restrict', SleepState.ints.NREMstate);
     end
 end
 %% 7. Load cell metrics across probes
