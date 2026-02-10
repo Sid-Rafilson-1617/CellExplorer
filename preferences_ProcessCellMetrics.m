@@ -6,6 +6,8 @@ function preferences = preferences_ProcessCellMetrics(session)
 % By Peter Petersen
 % Last edited: 10-11-2022
 
+% Parameters updates by Sid Rafilson 10-2-2026
+
 % General
 preferences.general.probesVerticalSpacing = 10; % 10um spacing between channels
 preferences.general.probesLayout = 'poly2';     % Default probe layout

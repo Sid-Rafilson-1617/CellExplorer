@@ -76,6 +76,9 @@ function cell_metrics = ProcessCellMetrics(varargin)
 %   By Peter Petersen
 %   Last edited: 27-02-2021
 
+%   Updated by Sid Rafilson
+%   Last edited: 10-2-2026
+
 %% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 % Parsing parameters
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
@@ -280,10 +283,10 @@ if ~isempty(parameters.spikes)
     parameters.spikes = [];
 else
     dispLog('Getting spikes',basename)
-    spikes{1} = loadSpikes('session',session,'labelsToRead',preferences.loadSpikes.labelsToRead,'getWaveformsFromDat',parameters.getWaveformsFromDat,'showWaveforms',parameters.showWaveforms, 'format', spikeFormat);
+    spikes{1} = loadSpikes_sr('session',session,'labelsToRead',preferences.loadSpikes.labelsToRead,'getWaveformsFromDat',parameters.getWaveformsFromDat,'showWaveforms',parameters.showWaveforms, 'format', spikeFormat);
 end
 if parameters.getWaveformsFromDat && (~isfield(spikes{1},'processinginfo') || ~isfield(spikes{1}.processinginfo.params,'WaveformsSource') || ~strcmp(spikes{1}.processinginfo.params.WaveformsSource,'dat file') || spikes{1}.processinginfo.version<3.5 || parameters.forceReloadSpikes == true)
-    spikes{1} = loadSpikes('forceReload',true,'spikes',spikes{1},'session',session,'labelsToRead',preferences.loadSpikes.labelsToRead,'showWaveforms',parameters.showWaveforms, 'format', spikeFormat);
+    spikes{1} = loadSpikes_sr('forceReload',true,'spikes',spikes{1},'session',session,'labelsToRead',preferences.loadSpikes.labelsToRead,'showWaveforms',parameters.showWaveforms, 'format', spikeFormat);
 end
 
 spikes{1}.numcells = length(spikes{1}.times);
@@ -292,6 +295,7 @@ if ~isfield(spikes{1},'total')
     spikes{1}.total = cellfun(@(X) length(X),spikes{1}.times);
 end
 if ~isfield(spikes{1},'spindices')
+    disp(spikes)
     spikes{1}.spindices = generateSpinDices(spikes{1}.times);
 end
 
@@ -299,6 +303,7 @@ if ~isfield(spikes{1},'cluID')
     disp('Generating cluIDs from UIDs')
     spikes{1}.cluID = spikes{1}.UID;
 end
+
 
 if ~isempty(parameters.restrictToIntervals)
     if size(parameters.restrictToIntervals,2) ~= 2
@@ -1372,6 +1377,7 @@ cell_metrics.electrodeGroup = spikes{spkExclu}.shankID;
 cell_metrics.maxWaveformCh = spikes{spkExclu}.maxWaveformCh1-1;
 cell_metrics.maxWaveformCh1 = spikes{spkExclu}.maxWaveformCh1;
 cell_metrics.spikeCount = spikes{spkExclu}.total;
+cell_metrics.KSlabels = spikes{spkExclu}.label;
 
 cell_metrics.general.electrodeGroups = session.extracellular.electrodeGroups.channels;
 

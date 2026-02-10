@@ -1,4 +1,4 @@
-function spikes = loadSpikes_SR(varargin)
+function spikes = loadSpikes_sr(varargin)
 % This function imports various spike sorting pipelines/formats into the CellExplorer spikes format 
 % Once spikes are imported and saved to a .mat file, the script will load this spikes struct instead of importing again. 
 % The forceReload parameter can overrule this.
@@ -9,7 +9,7 @@ function spikes = loadSpikes_SR(varargin)
 %      Custom (Spike timestamps as input)
 %      Klustakwik/Neurosuite
 %      KlustaViewa/Klustasuite
-%      MClust
+%      SGLX
 %      NWB
 %      Phy (default import format)
 %      Sebastien Royer's lab standard
@@ -60,6 +60,11 @@ function spikes = loadSpikes_SR(varargin)
 % petersen.peter@gmail.com
 % Last edited: 17-10-2022
 
+% Updates for reading multiprobe recordings with SGLX acquisition
+% Sid Rafilson
+% Last edited: 10-2-2026
+
+
 % Version history
 % 3.2 waveforms for phy data extracted from the raw dat
 % 3.3 waveforms extracted from raw dat using memmap function. Interval and bad channels bugs fixed as well
@@ -70,6 +75,7 @@ function spikes = loadSpikes_SR(varargin)
 % 3.8 Waveforn extraction separated into its own function
 % 4.1 Adding filter options (e.g. UID, shankID, cluID, region)
 % 4.3 Support for SpyKING Circus
+% 5.0 Support for SGLX and removed unnecessary format support. Specifies the Kilosort label for loaded clusters
 
 p = inputParser;
 addParameter(p,'basepath',pwd,@ischar); % basepath with dat file, used to extract the waveforms from the dat file
@@ -356,9 +362,9 @@ if parameters.forceReload
             %
             % Stores:
             %   spikes.ts{UID}               = raw sample timestamps (from spike_times.npy)
-            %   spikes.times{UID}            = adjusted seconds timestamps (from spike_times_sec_adj.npy)  [CellExplorer canonical]
-            %   spikes.times_sec_adj{UID}    = same as spikes.times{UID} (explicit field name)
-            %   spikes.times_raw{UID}        = raw seconds timestamps = spikes.ts{UID}/sr (optional convenience)
+            %   spikes.times{UID}            = raw seconds timestamps = spikes.ts{UID}/sr  [CellExplorer canonical]
+            %   spikes.times_sec_adj{UID}    = adjusted spike times from Tprime (explicit field name)(optional convenience(from spike_times_sec_adj.npy)
+    
             %
             % Uniqueness:
             %   Applied in SAMPLE units using spike_times.npy (0.5 ms tolerance in samples), and the same
@@ -443,10 +449,12 @@ if parameters.forceReload
             UID = 1;
             tol_samples = session.extracellular.sr * 5e-4; % 0.5 ms in samples
 
+            % Looping over the clusters
             for i = 1:length(dataArray{1})
                 cluster_id = dataArray{1}(i);
 
                 % Determine whether to include this cluster
+                label = dataArray{2}{i};  % default from file
                 include_cluster = true;
                 if ~raw_clusters
                     include_cluster = any(strcmpi(dataArray{2}{i}, labelsToRead));
@@ -466,13 +474,13 @@ if parameters.forceReload
                 [ts_samp_u, ind_unique] = uniquetol(ts_samp, tol_samples, 'DataScale', 1);
                 ids_u = ids(ind_unique);
 
-                % --- Store indices + times
+                % --- Store indices + times + label
                 spikes.ids{UID}  = ids_u;
                 spikes.ts{UID}   = ts_samp_u(:);                               % samples (raw clock)
                 t_adj_sec_u      = double(spike_times_sec_adj(ids_u));
-                spikes.times{UID}         = t_adj_sec_u(:);                    % seconds (aligned common clock)
-                spikes.times_sec_adj{UID} = spikes.times{UID};                  % explicit field name
-                spikes.times_raw{UID}     = spikes.ts{UID} / session.extracellular.sr; % optional convenience
+                spikes.times{UID}         = spikes.ts{UID} / session.extracellular.sr;                 
+                spikes.times_sec_adj{UID} = t_adj_sec_u(:);                 % seconds (aligned common clock) 
+                spikes.label{UID} = label;
 
                 spikes.cluID(UID) = cluster_id;
                 spikes.total(UID) = numel(spikes.ts{UID});
@@ -614,7 +622,7 @@ if parameters.forceReload
     
     % Attaching info about how the spikes structure was generated
     spikes.processinginfo.function = 'loadSpikes';
-    spikes.processinginfo.version = 4.3;
+    spikes.processinginfo.version = 5.0;
     spikes.processinginfo.date = now;
     spikes.processinginfo.params.forceReload = parameters.forceReload;
     spikes.processinginfo.params.electrodeGroups = electrodeGroups;
