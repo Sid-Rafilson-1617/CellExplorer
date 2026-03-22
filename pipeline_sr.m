@@ -1,22 +1,26 @@
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-% Running CellExplorer on the outputs from the ece_ks4 python preprocessing
+% Running CellExplorer on the outputs from the ece_ks4 neuropixels python preprocessing
+%
+% Written by: Sidney Rafilson & Nick Paleologos 
+% Last updated: 3-21-2026
+%
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
 %  1.1 Define the main directory of the preprocessed dataset. The main dir
 %  should contain the supercat output files
-basePath = 'Z:\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251106';
+basePath = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251107';
 %addpath(genpath(basePath));
 
 % 1.2 Define the supercat output folder
-supercat_path = 'Z:\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251106\preprocessing_output\supercat_pre_sleep_g0';
+supercat_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251107\preprocessing_output\supercat_pre_sleep_g0';
 baseName = bz_BasenameFromBasepath(basePath);
 cd(basePath)
 
-%1.3 Define the number of probes
+%1.3 Define the number of probes and the number of shanks per probe
 numOfProbes = 4;
 numShanks = 4;
 
-% 1.4 Define the expected number of channels
+% 1.4 Define the expected number of channels per probe (including the reference)
 nCh_expected = 385;
 
 %% 2. Building XML from meta file
@@ -25,10 +29,13 @@ save(fullfile(basePath, [baseName '.fileInfo.mat']), 'fileInfo', '-v7.3')
 
 % Paths to template XML and directory with imro files
 genXML_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Use_dependent_sleep\UDS_R01'; %'Z:\buzsakilab\Homes\voerom01\Use_dependent_sleep';
+
+% Specify the path to the imro files (channel maps)
 %imroDir_path = 'D:\Sid\data\Use_dependent_sleep\UDS_R01\Imro_files'; %'Z:\buzsakilab\Homes\voerom01\Use_dependent_sleep\Imro_files';
-%imroDir_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\IMRO_files';
-imroDir_path = 'Z:\Homes\ser9475\testing\imro';
-%%
+imroDir_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\IMRO_files';
+%imroDir_path = 'Z:\Homes\ser9475\testing\imro';
+
+% Looping over the probes to build the session files
 for probe_num = 1:numOfProbes
     for file_num = 1:fileInfo.nFolders{probe_num}
         ses_path = fileInfo.folder{1, probe_num}{file_num}; % session path
@@ -93,8 +100,6 @@ for probe_num = 1:numOfProbes
     oldFileName = [supercat_path, filesep, subDirName, filesep, fileName, '.ap.meta'];
     newFilePath = [basePath, filesep, baseName '_imec' num2str(probe_num-1) '.meta'];        
     movefile(oldFileName, newFilePath);
-
-        
     
     % Move kilsort directories
     oldFileName = [supercat_path, filesep, subDirName, filesep, ['Kilosort_imec' num2str(probe_num - 1) '_ks4']];
@@ -103,7 +108,7 @@ for probe_num = 1:numOfProbes
  
 end
 
-%% Phy autoclustering
+%% 3. phy autoclustering
 cd(basePath)
 for imec_use = 0:numOfProbes - 1
     % get the kilosort path for the probe
@@ -114,19 +119,20 @@ for imec_use = 0:numOfProbes - 1
 end
 
 
-
-%% 3. Generate session metadata struct using the template function and display the meta data in a gui
+%% 4. Generate session metadata struct using the template function and display the meta data in a gui
 cd(basePath)
 for imec_use = 0:numOfProbes - 1
     % Load session file with probe-specific basename
     session = sessionTemplate(basePath, 'basename', [baseName '_imec' num2str(imec_use)], 'showGUI',false);
 
     % Run the cell metrics pipeline 'ProcessCellMetrics' using the session struct as input
-    cell_metrics = ProcessCellMetrics('session', session, 'showGUI', false, 'manualAdjustMonoSyn', false, 'spikeFormat', 'sglx');
+    cell_metrics = ProcessCellMetrics('session', session, 'showGUI', false, 'manualAdjustMonoSyn', false, 'spikeFormat', 'sglx'); % set which KS label to include in preferences_processCellMetrics.m
 end
+
 
 %% 5. Sleep state scoring
 lfpFiles = checkFile('basepath',basePath,'fileType','.lfp');
+
 % Select lfp_num corresponding to probe with cortical channel
 for lfp_num = 1:length(lfpFiles)
     filename = lfpFiles(lfp_num).name; % remove extension
@@ -139,15 +145,17 @@ end
 %% 6. Ripple detection
 % manually inspect the lfp files to find good channels for ripple detection
 
-% Ripple channel selection
 
-
-% channels(row = probe/lfp file, col = shank)!! Check indexing
+% channels(row = probe/lfp file, col = shank) Check indexing. They should
+% be 1 indexed
 channels = [178, 129, 369, 318;   
             1, 59, 211, 265;
             19, 78, 221, 259;
             107, 83, 200, 313];
-%save('ripple_channel_config.mat','channels');
+        
+ % save the channel indices used for ripple detection     
+save('ripple_channel_config.mat','channels');
+
 % ---- Build LFP file list explicitly ----
 lfpFiles = cell(numOfProbes,1);
 
@@ -169,9 +177,11 @@ for probe = 1:numOfProbes
 
 
     for shank = 1:numShanks
-
+        
+        % get the channel index
         channel = channels(probe, shank);
 
+        % ripple detection
         ripples = bz_FindRipples_MV_SR( ...
             basePath,  channel, ...
             'filename', filename, ...
@@ -183,6 +193,8 @@ for probe = 1:numOfProbes
             'restrict', SleepState.ints.NREMstate);
     end
 end
+
+
 %% 7. Load cell metrics across probes
 basenames = getImecBasenames_sr(basePath);
 cell_metrics = loadCellMetricsBatch( ...
