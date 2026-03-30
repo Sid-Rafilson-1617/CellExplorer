@@ -2,17 +2,19 @@
 % Running CellExplorer on the outputs from the ece_ks4 neuropixels python preprocessing
 %
 % Written by: Sidney Rafilson & Nick Paleologos 
-% Last updated: 3-21-2026
+% Last updated: 3-30-2026
 %
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
 %  1.1 Define the main directory of the preprocessed dataset. The main dir
 %  should contain the supercat output files
-basePath = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251107';
+basePath = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251112';
 %addpath(genpath(basePath));
 
-% 1.2 Define the supercat output folder
-supercat_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251107\preprocessing_output\supercat_pre_sleep_g0';
+% 1.2 Define the supercat output folder. If there is no supercat (from a
+% session with only one recording) then set this path to the CatGT folder
+% with the kilosort outputs
+supercat_path = '\\research-cifs.nyumc.org\research\buzsakilab\Homes\voerom01\Bilat_HPC\Bilat_R02\Bilat_R02_20251112\preprocessing_output\supercat_pre_sleep_g0';
 baseName = bz_BasenameFromBasepath(basePath);
 cd(basePath)
 
@@ -54,7 +56,19 @@ for probe_num = 1:numOfProbes
     subDirName = [fileName_pt1 '_imec' num2str(probe_num - 1)]; 
 
     movefile(fullfile(ses_path, ses_file.name), [basePath, filesep, baseName '.imec' num2str(probe_num-1), '.session.mat']); % needed for state scoring
-    movefile(fullfile(ses_path, [fileName_pt1, '_t0', '_imec' num2str(probe_num-1), '.ap.xml']), [basePath, filesep, baseName '_imec' num2str(probe_num-1),'.xml']); % needed for channelMap
+    
+    % finding the xml file and moving it
+    file1 = fullfile(ses_path, [fileName_pt1, '_t0', '_imec' num2str(probe_num-1), '.ap.xml']);
+    file2 = fullfile(ses_path, [fileName_pt1, '_t0', '.imec' num2str(probe_num-1), '.ap.xml']);
+    dest = fullfile(basePath, [baseName '_imec' num2str(probe_num-1), '.xml']);
+    if exist(file1, 'file')
+        movefile(file1, dest);
+    elseif exist(file2, 'file')
+        movefile(file2, dest);
+    else
+        error('Neither XML file found for probe %d', probe_num-1);
+    end
+    
     
     % Create channel maps for Kilosort 
     SGLXMetaToCoords; % make sure outType = 1
@@ -131,12 +145,33 @@ end
 
 
 %% 5. Sleep state scoring
+
+
+% Manually specify theta channels (LM or radiatum)
+theta_channels = {
+    [159, 163], ...
+    [1, 35, 81, 198, 337], ...
+    [8, 20, 54, 223], ...
+    [50, 1]
+};
+save('theta_channel_config.mat', 'theta_channels');
+
+
+% Manually specify slow wave channels (cortex)
+SWChannels = {
+    [104, 42, 2, 26, 361], ...
+    [], ...
+    [], ...
+    []
+};
+save('SWChannel_config.mat', 'SWChannels')
+
 lfpFiles = checkFile('basepath',basePath,'fileType','.lfp');
 
 % Select lfp_num corresponding to probe with cortical channel
 for lfp_num = 1:length(lfpFiles)
     filename = lfpFiles(lfp_num).name; % remove extension
-    SleepState = SleepScoreMaster_km(basePath,'filename',filename); % include reject channels and SW and theta channels
+    SleepState = SleepScoreMaster_km(basePath,'filename', filename, 'ThetaChannels', theta_channels{lfp_num}, 'SWChannels', SWChannels{lfp_num}, 'Notch60Hz', 1, 'NotchHVS', 1);
 end
 
 % Check sleep state scoring results with GUI
@@ -148,10 +183,10 @@ end
 
 % channels(row = probe/lfp file, col = shank) Check indexing. They should
 % be 1 indexed
-channels = [178, 129, 369, 318;   
-            1, 59, 211, 265;
-            19, 78, 221, 259;
-            107, 83, 200, 313];
+channels = [27, 75, 227, 136;   
+            111, 166, 328, 52;
+            104, 161, 304, 349;
+            144, 180, 291, 248];
         
  % save the channel indices used for ripple detection     
 save('ripple_channel_config.mat','channels');

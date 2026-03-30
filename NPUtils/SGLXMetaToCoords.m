@@ -30,7 +30,7 @@ bProcLF = 1; % only used with outType 3; append new fields to matching lf meta
 
 if (length(varargin) == 0)
     % Added to avoid manual selection if only 1 meta file is present
-    metaFiles = checkFile('basepath', pwd, 'fileType', '.ap.meta'); % Added .ap as prefix for .meta SR
+    metaFiles = checkFile('basepath', pwd, 'fileType', '.meta');
     if length(metaFiles) ~= 1
        % Ask user for metadata file
        [metaName,path] = uigetfile('*.meta', 'Select AP Metadata File');
