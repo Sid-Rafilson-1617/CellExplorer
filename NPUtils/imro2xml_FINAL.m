@@ -85,10 +85,12 @@ if isempty(imroFile)
 end
 
 %% Locate .xml file if not specified 
+
 if isempty(xmlFile)
     xmlFiles = dir(fullfile(basepath,'*.xml'));
+    disp(xmlFiles)
     if numel(xmlFiles) == 0
-        sprintf('No .xml file found in directory: %s', basepath);
+        warning('No .xml file found in directory: %s', basepath);
         xmlFiles = dir(fullfile(genXML_path,'*.xml'));
         xmlFile = fullfile(genXML_path, xmlFiles(1).name);
     elseif numel(xmlFiles) > 1

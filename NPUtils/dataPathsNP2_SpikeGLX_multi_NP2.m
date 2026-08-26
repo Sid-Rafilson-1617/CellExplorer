@@ -25,7 +25,7 @@ for tt = 1:numOfProbes
         folder0{fIdx} = [d(fIdx).folder];
         folder{fIdx} = [d(fIdx).folder,filesep,d(fIdx).name];
         folderTTL{fIdx} = [d2(fIdx).folder,filesep,d2(fIdx).name];
-        recordingTime(fIdx) = str2num(d(fIdx).date([13 14 16 17 19 20]));
+        recordingTime(fIdx) = str2double(d(fIdx).date([13 14 16 17 19 20])); %str2num
         
     end
     

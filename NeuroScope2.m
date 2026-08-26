@@ -5343,7 +5343,7 @@ end
         delete(UI.chanCoordsAxes.Children)
         if isfield(data.session.extracellular,'chanCoords') && isfield(data.session.extracellular.chanCoords,'x') &&~isempty(data.session.extracellular.chanCoords.x) && ~isempty(data.session.extracellular.chanCoords.y)
             chanCoordsVisualization(data.session.extracellular.chanCoords,UI.chanCoordsAxes);
-            updateChanCoordsColorHighlight
+%             updateChanCoordsColorHighlight
             
             image_toolbox_installed = isToolboxInstalled('Image Processing Toolbox');
             if ~verLessThan('matlab', '9.5') && image_toolbox_installed

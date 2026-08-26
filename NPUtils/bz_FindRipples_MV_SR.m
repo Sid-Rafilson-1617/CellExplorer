@@ -45,7 +45,9 @@ function [ripples] = bz_FindRipples_MV(varargin)
 %                   (default = [130 200])
 %     'EMGThresh'   0-1 threshold of EMG to exclude noise
 %     'saveMat'     logical (default=false) to save in buzcode format
-%     'plotType'   1=original version (several plots); 2=only raw lfp
+%     'plotType'    1=original version (several plots); 2=only raw lfp
+%     'probe'       probe number used for naming convention in saved file
+%     'shank'       shank number used for naming convention in saved file
 %    =========================================================================
 %
 % OUTPUT
@@ -67,6 +69,7 @@ function [ripples] = bz_FindRipples_MV(varargin)
 
 % Copyright (C) 2004-2011 by Michaël Zugaro, initial algorithm by Hajime Hirase
 % edited by David Tingley, 2017
+% edited by Sidney Rafilson, 2026
 %
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -90,7 +93,7 @@ addParameter(p,'saveMat',false,@islogical);
 addParameter(p,'minDuration',20,@isnumeric)
 addParameter(p,'plotType',1,@isnumeric) % changed from 2 to 1
 addParameter(p,'filename','',@isstr) % no extension
-addParameter(p, 'probe', '', @isstr); % probe and shank string used for saving results
+addParameter(p, 'probe', '', @isstr); 
 addParameter(p, 'shank', '', @isstr);
 
 if isstr(varargin{1})  % if first arg is basepath
@@ -146,7 +149,6 @@ windowLength = frequency/frequency*11;
 
 % Square and normalize signal
 squaredSignal = signal.^2;
-% squaredSignal = abs(opsignal);
 window = ones(windowLength,1)/windowLength;
 keep = [];
 if ~isempty(restrict)

@@ -1377,7 +1377,7 @@ cell_metrics.electrodeGroup = spikes{spkExclu}.shankID;
 cell_metrics.maxWaveformCh = spikes{spkExclu}.maxWaveformCh1-1;
 cell_metrics.maxWaveformCh1 = spikes{spkExclu}.maxWaveformCh1;
 cell_metrics.spikeCount = spikes{spkExclu}.total;
-cell_metrics.KSlabels = spikes{spkExclu}.label;
+%cell_metrics.KSlabels = spikes{spkExclu}.label;
 
 cell_metrics.general.electrodeGroups = session.extracellular.electrodeGroups.channels;
 
