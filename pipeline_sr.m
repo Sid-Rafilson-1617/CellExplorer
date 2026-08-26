@@ -1,10 +1,6 @@
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-% Running CellExplorer on the outputs from the ece_ks4 neuropixels python
-% preprocessing. This is part 2 of the preprocessing pipeline for
-% neuropixels recordings in the Buzsaki lab.
-% 
-% For part 1 see https://github.com/Sid-Rafilson-1617/ecephys_spike_sorting/tree/main/ecephys_spike_sorting/scripts/buzsaki_preprocessing_pipeline
-%
+% Preprocessing pipeline for Neuropixels recordings in the Buzsaki Lab
+% Part 2
 %
 % Written by: 
 %   Sidney Rafilson
@@ -15,46 +11,58 @@
 %   Nicholas.Paleologos@nyulangone.org
 %
 % Last updated: 8-26-2026
+% 
+% DESCRIPTION
+% This is the second part of the preprocessing pipeline which runs
+% CellExplorer and reformats the data with standarized Buzcode
+% formatting. Additionaly, sleep states and ripple detection are included.
+% This script handles multi-shank multi-probe recordings for longitudinal
+% (or otherwise spatially organized) neuropixels recordings.
+% 
+% For part 1 see https://github.com/Sid-Rafilson-1617/ecephys_spike_sorting/tree/main/ecephys_spike_sorting/scripts/buzsaki_preprocessing_pipeline
+%
 %
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
 %% 1. USER CONFIGURATION
 
-
 %  1.1 Define the main directory of the preprocessed dataset. The main dir
 %  should contain the supercat output files
 basePath = "C:\Users\srafi\OneDrive\Buzsaki Lab\data\testing-multi-NPX-SGLX - Copy";
-%addpath(genpath(basePath));
+
 
 % 1.2 Define the supercat output folder. If there is no supercat (from a
 % session with only one recording) then set this path to the CatGT folder
-% with the kilosort outputs
+% containing the kilosort outputs
 supercat_path = "C:\Users\srafi\OneDrive\Buzsaki Lab\data\testing-multi-NPX-SGLX - Copy\preprocessing_output\supercat_pre_homecage_g0";
 baseName = bz_BasenameFromBasepath(basePath);
-cd(basePath)
+
 
 % 1.3 Define the path to template XML file which will be propogated with
 % data from the SGLX meta files
 genXML_path = 'Z:\Buzsakilabspace\LabShare\MisiVoroslakos\genXML'; 
 
+
 % 1.4 Define the the directory containing imro (channel map) files for this
 % recording.
-imroDir_path = 'C:\Users\srafi\OneDrive\Buzsaki Lab\data\testing-multi-NPX-SGLX - Copy\imro';
-%imroDir_path = 'D:\Sid\data\Use_dependent_sleep\UDS_R01\Imro_files'; %'Z:\buzsakilab\Homes\voerom01\Use_dependent_sleep\Imro_files';'Z:\Homes\ser9475\testing\imro';
+imroDir_path = 'C:\Users\srafi\OneDrive\Buzsaki Lab\data\testing-multi-NPX-SGLX - Copy\imro'; %'D:\Sid\data\Use_dependent_sleep\UDS_R01\Imro_files'; %'Z:\buzsakilab\Homes\voerom01\Use_dependent_sleep\Imro_files';'Z:\Homes\ser9475\testing\imro';
+
 
 %1.3 Define the number of probes and the number of shanks per probe
 numOfProbes = 2;
 numShanks = 4; % per probe
 
-% 1.4 Define the expected number of channels per probe (including the reference)
-nCh_expected = 385;
 
-    
+% 1.4 Define the expected number of channels per probe (including the reference)
+nCh_expected = 385; % 385 is standard for Neuropixels
+
 %% 2. Building XML from meta file
 
+% get the file info for each probe
 fileInfo = dataPathsNP2_SpikeGLX_multi_NP2(supercat_path, numOfProbes);
 disp(fileInfo)
 
+% save the info as matlab file
 fileName = baseName + ".fileInfo.mat";
 save(fullfile(basePath, fileName), 'fileInfo', '-v7.3');
 
@@ -64,8 +72,7 @@ for probe_num = 1:numOfProbes
 
     probeID = string(probe_num - 1);
 
-    % Build session/XML files for each folder belonging to this probe
-
+    % Build session XML files for each folder belonging to the current probe
     for file_num = 1:fileInfo.nFolders{probe_num}
 
         ses_path = fileInfo.folder{1, probe_num}{file_num};
@@ -94,13 +101,6 @@ for probe_num = 1:numOfProbes
 
 
     % Determine recording basename
-
-    % fileInfo.basename currently looks something like:
-    % ["supercat_pre_homecage_g0" "_imec" "0"]
-    %
-    % We only want the first element:
-    % "supercat_pre_homecage_g0"
-
     basenameThisProbe = string(fileInfo.basename{probe_num}(1));
 
     % Remove the "supercat_" prefix
@@ -112,9 +112,7 @@ for probe_num = 1:numOfProbes
 
 
     % Locate generated session file
-
     ses_file = dir(fullfile(ses_path, "*.session.mat"));
-
     if isempty(ses_file)
         error('No .session.mat file found in: %s', ses_path);
     elseif numel(ses_file) > 1
@@ -123,50 +121,32 @@ for probe_num = 1:numOfProbes
 
 
     % Copy session file to basePath for state scoring
-
-    % This naming convention is intentionally:
-    % basename.imec0.session.mat
-
     sourceSession = fullfile(ses_path, string(ses_file.name));
-
     destSession = fullfile( ...
         basePath, ...
         baseName + ".imec" + probeID + ".session.mat");
-
     movefile(sourceSession, destSession);
 
 
     % Find generated XML and move it to basePath
-
-    % Two possible naming conventions are supported
-
     file1 = fullfile( ...
         ses_path, ...
         fileName_pt1 + "_t0_imec" + probeID + ".ap.xml");
-
     file2 = fullfile( ...
         ses_path, ...
         fileName_pt1 + "_t0.imec" + probeID + ".ap.xml");
-
     destXML = fullfile( ...
         basePath, ...
         baseName + "_imec" + probeID + ".xml");
-
     if isfile(file1)
-
         movefile(file1, destXML);
-
     elseif isfile(file2)
-
         movefile(file2, destXML);
-
     else
-
         error( ...
             ['Neither expected XML file was found for probe %d.\n' ...
              'Checked:\n%s\n%s'], ...
             probe_num - 1, file1, file2);
-
     end
 
 
@@ -174,137 +154,107 @@ for probe_num = 1:numOfProbes
 
     % Make sure SGLXMetaToCoords has outType = 1
     SGLXMetaToCoords;
-
     coords_file = fullfile( ...
         ses_path, ...
         string(ses_file.name(1:end-12)) + "_kilosortChanMap.mat");
-
     if ~isfile(coords_file)
         error('Kilosort channel map not found: %s', coords_file);
     end
 
 
     % Update session metadata
-
     load(coords_file, 'xcoords', 'ycoords', 'kcoords');
-
     session.general.name = ...
         baseName + "_imec" + probeID;
-
     session.general.basePath = basePath;
-
 
     % Ensure coordinate arrays are column vectors
     xcoords = xcoords(:);
     ycoords = ycoords(:);
 
-
     % Add placeholder coordinate for sync channel if necessary
     if numel(xcoords) == nCh_expected - 1
-
         xcoords(end + 1) = xcoords(end);
         ycoords(end + 1) = ycoords(end);
 
     elseif numel(xcoords) ~= nCh_expected
-
         error( ...
             'Unexpected coordinate length: %d (expected %d or %d)', ...
             numel(xcoords), ...
             nCh_expected - 1, ...
             nCh_expected);
-
     end
 
-
+    % fill in the variables for the session file
     session.extracellular.nChannels = nCh_expected;
-
     session.extracellular.chanCoords.x = xcoords;
     session.extracellular.chanCoords.y = ycoords;
-
     session.extracellular.chanCoords.verticalSpacing = [];
     session.extracellular.chanCoords.source = 'Kilosort';
     session.extracellular.chanCoords.layout = '';
 
 
     % Save updated probe-specific session file
-
     sessionFile = fullfile( ...
         basePath, ...
         baseName + "_imec" + probeID + ".session.mat");
-
     save(sessionFile, 'session');
 
 
     % Move Kilosort channel map to basePath
-
     destCoords = fullfile( ...
         basePath, ...
         baseName + "_imec" + probeID + ".kilosortChanMap.mat");
-
     movefile(coords_file, destCoords);
 
 
     % Move AP binary and rename as .dat
-
     oldFileName = fullfile( ...
         supercat_path, ...
         subDirName, ...
         fileName + ".ap.bin");
-
     newFilePath = fullfile( ...
         basePath, ...
         baseName + "_imec" + probeID + ".dat");
-
     if ~isfile(oldFileName)
         error('AP binary file not found: %s', oldFileName);
     end
-
     movefile(oldFileName, newFilePath);
 
 
     % Move LF binary and rename as .lfp
-
     oldFileName = fullfile( ...
         supercat_path, ...
         subDirName, ...
         fileName + ".lf.bin");
-
     newFilePath = fullfile( ...
         basePath, ...
         baseName + "_imec" + probeID + ".lfp");
-
     if ~isfile(oldFileName)
         error('LF binary file not found: %s', oldFileName);
     end
-
     movefile(oldFileName, newFilePath);
 
 
     % Move AP metadata file
-
     oldFileName = fullfile( ...
         supercat_path, ...
         subDirName, ...
         fileName + ".ap.meta");
-
     newFilePath = fullfile( ...
         basePath, ...
         baseName + "_imec" + probeID + ".meta");
-
     if ~isfile(oldFileName)
         error('AP meta file not found: %s', oldFileName);
     end
-
     movefile(oldFileName, newFilePath);
 
 
     % Move Kilosort directory
-
     oldFileName = fullfile( ...
         supercat_path, ...
         subDirName, ...
         "Kilosort_imec" + probeID + "_ks4");
-
     newFilePath = fullfile( ...
         basePath, ...
         "Kilosort_imec" + probeID + "_ks4");
@@ -312,9 +262,7 @@ for probe_num = 1:numOfProbes
     if ~isfolder(oldFileName)
         error('Kilosort directory not found: %s', oldFileName);
     end
-
     movefile(oldFileName, newFilePath);
-
 end
 
 %% 3. phy autoclustering
